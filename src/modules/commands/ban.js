@@ -9,7 +9,7 @@ import { _ } from "../../translations/index.js";
 
 class Ban extends Command {
 
-	constructor(room, votesToBan = 8) {
+	constructor(room, votesToBan = 8, excludedPlayers = [], banAdmins = false) {
 		super(room, {
 			"!ban": (player, message) => {
 				this.vote(player.name, message);
@@ -19,9 +19,11 @@ class Ban extends Command {
 					return;
 				this.reset();
 				this.room.clearBans();
-				this.room.sendChat(_("Los usuarios baneados han sido perdonados, pero siempre puedes banearlos denuevo con !ban 😈"));
+				this.room.sendChat(_("Banned users has been cleared."));
 			}
 		});
+		this.banAdmins = banAdmins;
+		this.excludedPlayers = excludedPlayers;
 		this.votesToBan = votesToBan;
 		this.room.addEventListener("onPlayerLeave", this.removeVotesFromPlayer);
 		this.votes = {}
@@ -29,16 +31,16 @@ class Ban extends Command {
 
 	vote = (player, playerToBeBanned) => {
 
-		if(playerToBeBanned === "👁J 👁" || playerToBeBanned === "🤖") {
-			this.room.sendChat(`No puedes banear a un Dios del Olimpo.`);
-			return;
-		}
-
 		const players = this.room.getPlayerList();
 		const found = find(players, { name: playerToBeBanned });
 
 		if(!found) {
-			this.room.sendChat(_(`No hay ningún jugador con el nick especificado.`));
+			this.room.sendChat(_(`There is no player with the specified nick name`));
+			return;
+		}
+
+		if(found.admin && !this.banAdmins) {
+			this.room.sendChat(_(`You can't ban an admin`));
 			return;
 		}
 
@@ -47,11 +49,11 @@ class Ban extends Command {
 		const votes = this.countVotes(playerToBeBanned);
 
 		if(votes >= this.votesToBan) {
-			this.room.kickPlayer(this.getPlayerId(playerToBeBanned), _("Baneado por votación popular"), true);
+			this.room.kickPlayer(this.getPlayerId(playerToBeBanned), _("Banned in democracy"), true);
 		} else {
 			if(player === playerToBeBanned)
-				this.room.sendChat(_(`Si, también puedes votar por ti mismo 🤦🏻‍♂️`));
-			this.room.sendChat(_(`Voto recibido. El jugador %s tiene %d votos de ban.\nSe necesitan %d votos para banear al jugador.`, playerToBeBanned, this.countVotes(playerToBeBanned), this.votesToBan));
+				this.room.sendChat(_(`Yes, you can also vote by yourself 🤦🏻‍♂️`));
+			this.room.sendChat(_(`Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.`, playerToBeBanned, this.countVotes(playerToBeBanned), this.votesToBan));
 		}
 	}
 

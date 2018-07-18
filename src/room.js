@@ -3,8 +3,9 @@ import CommandsManager from "./commandsManager.js";
 //Haxball room abstraction that implements a subscription system for all game events
 // and add some new ones
 class Room {
-	constructor(room) {
+	constructor(room, settings) {
 		this.room = room;
+		this.settings = settings;
 		this._events = {
 			onPlayerJoin: [],
 			onPlayerLeave: [],

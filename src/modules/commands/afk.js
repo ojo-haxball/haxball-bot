@@ -16,10 +16,10 @@ class Afk extends Command {
 	toggleAfk = player => {
 		if(has(this.afks, `[${player.name}]`)) {
 			delete this.afks[player.name];
-			this.room.sendChat(_(`El jugador %s ha vuelto`, player.name));
+			this.room.sendChat(_(`Player %s has comeback`, player.name));
 		} else {
 			set(this.afks, `[${player.name}]`, true);
-			this.room.sendChat(_(`El jugador %s está ahora AFK`, player.name));
+			this.room.sendChat(_(`Player %s is now AFK`, player.name));
 		}
 		return false;
 	};
@@ -27,9 +27,9 @@ class Afk extends Command {
 	listAfks = () => {
 		const players = map(this.afks, (val, key) => key).join(", ");
 		if(players.length == 0) {
-			this.room.sendChat(_(`No hay jugadores AFK`));
+			this.room.sendChat(_(`There are no players AFK`));
 		} else {
-			this.room.sendChat(_(`Los siguientes jugadores están afk: %s`, players));
+			this.room.sendChat(_(`Next players are AFK: %s`, players));
 		}
 		return true;
 	};

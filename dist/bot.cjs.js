@@ -117,7 +117,7 @@ var CommandsManager = function CommandsManager(room) {
 //Haxball room abstraction that implements a subscription system for all game events
 // and add some new ones
 
-var Room = function Room(room) {
+var Room = function Room(room, settings) {
 	var _this = this;
 
 	classCallCheck(this, Room);
@@ -143,6 +143,7 @@ var Room = function Room(room) {
 	};
 
 	this.room = room;
+	this.settings = settings;
 	this._events = {
 		onPlayerJoin: [],
 		onPlayerLeave: [],
@@ -222,11 +223,12 @@ var Bot = function () {
 		    teamsLock = _settings$teamsLock === undefined ? true : _settings$teamsLock,
 		    _settings$customStadi = settings.customStadium,
 		    customStadium = _settings$customStadi === undefined ? false : _settings$customStadi,
-		    rest = objectWithoutProperties(settings, ["scoreLimit", "timeLimit", "teamsLock", "customStadium"]);
+		    _settings$dbPrefix = settings.dbPrefix,
+		    rest = objectWithoutProperties(settings, ["scoreLimit", "timeLimit", "teamsLock", "customStadium", "dbPrefix"]);
 
 
 		var room = window.HBInit(rest);
-		this.room = new Room(room);
+		this.room = new Room(room, settings);
 		if (customStadium) this.room.setCustomStadium(JSON.stringify(customStadium));
 		this.room.setScoreLimit(scoreLimit);
 		this.room.setTimeLimit(timeLimit);
@@ -376,10 +378,10 @@ var Afk = function (_Command) {
 		_this.toggleAfk = function (player) {
 			if (has(_this.afks, "[" + player.name + "]")) {
 				delete _this.afks[player.name];
-				_this.room.sendChat(_("El jugador %s ha vuelto", player.name));
+				_this.room.sendChat(_("Player %s has comeback", player.name));
 			} else {
 				set(_this.afks, "[" + player.name + "]", true);
-				_this.room.sendChat(_("El jugador %s est\xE1 ahora AFK", player.name));
+				_this.room.sendChat(_("Player %s is now AFK", player.name));
 			}
 			return false;
 		};
@@ -389,9 +391,9 @@ var Afk = function (_Command) {
 				return key;
 			}).join(", ");
 			if (players.length == 0) {
-				_this.room.sendChat(_("No hay jugadores AFK"));
+				_this.room.sendChat(_("There are no players AFK"));
 			} else {
-				_this.room.sendChat(_("Los siguientes jugadores est\xE1n afk: %s", players));
+				_this.room.sendChat(_("Next players are AFK: %s", players));
 			}
 			return true;
 		};
@@ -408,6 +410,8 @@ var Ban = function (_Command) {
 
 	function Ban(room) {
 		var votesToBan = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 8;
+		var excludedPlayers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+		var banAdmins = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
 		classCallCheck(this, Ban);
 
 		var _this = possibleConstructorReturn(this, (Ban.__proto__ || Object.getPrototypeOf(Ban)).call(this, room, {
@@ -418,22 +422,22 @@ var Ban = function (_Command) {
 				if (!player.admin) return;
 				_this.reset();
 				_this.room.clearBans();
-				_this.room.sendChat(_("Los usuarios baneados han sido perdonados, pero siempre puedes banearlos denuevo con !ban 😈"));
+				_this.room.sendChat(_("Banned users has been cleared."));
 			}
 		}));
 
 		_this.vote = function (player, playerToBeBanned) {
 
-			if (playerToBeBanned === "👁J 👁" || playerToBeBanned === "🤖") {
-				_this.room.sendChat("No puedes banear a un Dios del Olimpo.");
-				return;
-			}
-
 			var players = _this.room.getPlayerList();
 			var found = find(players, { name: playerToBeBanned });
 
 			if (!found) {
-				_this.room.sendChat(_("No hay ning\xFAn jugador con el nick especificado."));
+				_this.room.sendChat(_("There is no player with the specified nick name"));
+				return;
+			}
+
+			if (found.admin && !_this.banAdmins) {
+				_this.room.sendChat(_("You can't ban an admin"));
 				return;
 			}
 
@@ -442,10 +446,10 @@ var Ban = function (_Command) {
 			var votes = _this.countVotes(playerToBeBanned);
 
 			if (votes >= _this.votesToBan) {
-				_this.room.kickPlayer(_this.getPlayerId(playerToBeBanned), _("Baneado por votación popular"), true);
+				_this.room.kickPlayer(_this.getPlayerId(playerToBeBanned), _("Banned in democracy"), true);
 			} else {
-				if (player === playerToBeBanned) _this.room.sendChat(_("Si, tambi\xE9n puedes votar por ti mismo \uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F"));
-				_this.room.sendChat(_("Voto recibido. El jugador %s tiene %d votos de ban.\nSe necesitan %d votos para banear al jugador.", playerToBeBanned, _this.countVotes(playerToBeBanned), _this.votesToBan));
+				if (player === playerToBeBanned) _this.room.sendChat(_("Yes, you can also vote by yourself \uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F"));
+				_this.room.sendChat(_("Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.", playerToBeBanned, _this.countVotes(playerToBeBanned), _this.votesToBan));
 			}
 		};
 
@@ -471,6 +475,8 @@ var Ban = function (_Command) {
 			return size(get(_this.votes, "[" + player + "].votes", {}));
 		};
 
+		_this.banAdmins = banAdmins;
+		_this.excludedPlayers = excludedPlayers;
 		_this.votesToBan = votesToBan;
 		_this.room.addEventListener("onPlayerLeave", _this.removeVotesFromPlayer);
 		_this.votes = {};
@@ -558,7 +564,7 @@ var FloodProtection = function FloodProtection(room) {
 			for (var i = 1; i < messages.length; i++) {
 				if (messages[i].text != messages[i - 1].text) return;
 			}
-			_this.room.kickPlayer(player.id, "Spam detectado", _this.ban);
+			_this.room.kickPlayer(player.id, "Spam detected", _this.ban);
 		}, 1);
 	};
 
@@ -581,7 +587,7 @@ var Stats = function () {
 			});
 			for (var i = 0; i < 3; i++) {
 				if (!ordered[i]) break;
-				_this.room.sendChat(i + 1 + "\xBA.- " + ordered[i].goals + " goles - " + ordered[i].name);
+				_this.room.sendChat(_("%d\xBA.- %d goals - %s", i + 1, ordered[i].goals, ordered[i].name));
 			}
 		};
 
@@ -591,7 +597,7 @@ var Stats = function () {
 			});
 			for (var i = 0; i < 3; i++) {
 				if (!ordered[i]) break;
-				_this.room.sendChat(i + 1 + "\xBA.- " + ordered[i].ownGoals + " autogoles - " + ordered[i].name);
+				_this.room.sendChat(_("%d\xBA.- %d own goals - %s", i + 1, ordered[i].ownGoals, ordered[i].name));
 			}
 		};
 
@@ -600,8 +606,8 @@ var Stats = function () {
 
 			var goals = get(_this.goalsRegistry, name + ".goals", 0);
 			var ownGoals = get(_this.goalsRegistry, name + ".ownGoals", 0);
-			_this.room.sendChat(name + " lleva " + goals + " goles");
-			_this.room.sendChat(name + " lleva " + ownGoals + " autogoles");
+			_this.room.sendChat(_("%s has %d goals", name, goals));
+			_this.room.sendChat(_("%s has %d own goals", name, ownGoals));
 		};
 
 		this.saveLastKick = function (player) {
@@ -610,20 +616,20 @@ var Stats = function () {
 
 		this.onTeamGoal = function (teamId) {
 			if (!_this.lastKick) {
-				_this.room.sendChat("Gol!!!");
+				_this.room.sendChat(_("Goal!!!"));
 				return;
 			}
 
 			if (_this.lastKick.team === teamId) {
-				_this.room.sendChat("Gol del jugador " + _this.lastKick.name + "!!!");
+				_this.room.sendChat(_("Goal from player %s!!!", _this.lastKick.name));
 				var goals = get(_this.goalsRegistry, _this.lastKick.name + ".goals", 0);
 				set(_this.goalsRegistry, _this.lastKick.name + ".goals", ++goals);
-				_this.room.sendChat(_this.lastKick.name + " lleva " + goals + " goles.");
+				_this.room.sendChat(_("%s has %d goals.", _this.lastKick.name, goals));
 			} else {
-				_this.room.sendChat("Autogol del jugador " + _this.lastKick.name + " \uD83D\uDE06\uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F");
+				_this.room.sendChat(_("Own goal from player %s \uD83D\uDE06\uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F", _this.lastKick.name));
 				var ownGoals = get(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", 0);
 				set(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", ++ownGoals);
-				_this.room.sendChat(_this.lastKick.name + " lleva " + ownGoals + " autogoles.");
+				_this.room.sendChat(_("%s has %d own goals.", _this.lastKick.name, ownGoals));
 			}
 			set(_this.goalsRegistry, _this.lastKick.name + ".name", _this.lastKick.name);
 			_this.resetLastKick();
@@ -654,12 +660,12 @@ var Stats = function () {
 	createClass(Stats, [{
 		key: "saveStats",
 		value: function saveStats() {
-			localStorage.setItem("__goals__registry__", JSON.stringify(this.goalsRegistry));
+			localStorage.setItem(this.room.dbPrefix + "__goals__registry__", JSON.stringify(this.goalsRegistry));
 		}
 	}, {
 		key: "loadStats",
 		value: function loadStats() {
-			var registry = localStorage.getItem("__goals__registry__");
+			var registry = localStorage.getItem(this.room.dbPrefix + "__goals__registry__");
 			if (!registry) {
 				this.goalsRegistry = {};
 				return;
