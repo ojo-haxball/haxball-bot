@@ -68,11 +68,11 @@ class Ban extends Command {
 	}
 
 	encode = nick => {
-		return btoa("nick-" + nick);
+		return btoa(unescape(encodeURIComponent("nick-" + nick)));
 	}
 
 	decode = str => {
-		let nick = atob(str);
+		let nick = decodeURIComponent(escape(atob(str)));
 		return nick.replace("nick-", "");
 	}
 

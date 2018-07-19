@@ -456,11 +456,11 @@ var Ban = function (_Command) {
 		};
 
 		_this.encode = function (nick) {
-			return btoa("nick-" + nick);
+			return btoa(unescape(encodeURIComponent("nick-" + nick)));
 		};
 
 		_this.decode = function (str) {
-			var nick = atob(str);
+			var nick = decodeURIComponent(escape(atob(str)));
 			return nick.replace("nick-", "");
 		};
 
