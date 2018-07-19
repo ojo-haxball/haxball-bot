@@ -44,7 +44,7 @@ class Ban extends Command {
 			return;
 		}
 
-		set(this.votes, `[${playerToBeBanned}].votes[${player}`, true);
+		set(this.votes, `[${this.encode(playerToBeBanned)}].votes[${this.encode(player)}`, true);
 
 		const votes = this.countVotes(playerToBeBanned);
 
@@ -55,16 +55,28 @@ class Ban extends Command {
 				this.room.sendChat(_(`Yes, you can also vote by yourself 🤦🏻‍♂️`));
 			this.room.sendChat(_(`Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.`, playerToBeBanned, this.countVotes(playerToBeBanned), this.votesToBan));
 		}
+
+		console.log(this.votes);
+
 	}
 
 	removeVotesFromPlayer = leavingPlayer => {
-		if(has(this.votes, `[${leavingPlayer.name}]`))
-			delete this.votes[leavingPlayer.name];
+		if(has(this.votes, `[${this.encode(leavingPlayer.name)}]`))
+			delete this.votes[this.encode(leavingPlayer.name)];
 
 		forEach(this.votes, (playerInfo) => {
-			if(has(playerInfo, `votes[${leavingPlayer.name}]`))
-				delete playerInfo.votes[leavingPlayer.name];
+			if(has(playerInfo, `votes[${this.encode(leavingPlayer.name)}]`))
+				delete playerInfo.votes[this.encode(leavingPlayer.name)];
 		});
+	}
+
+	encode = nick => {
+		return btoa("nick-" + nick);
+	}
+
+	decode = str => {
+		let nick = atob(str);
+		return nick.replace("nick-", "");
 	}
 
 	reset = () => {
@@ -78,7 +90,7 @@ class Ban extends Command {
 	}
 
 	countVotes = player => {
-		return size(get(this.votes, `[${player}].votes`, {}));
+		return size(get(this.votes, `[${this.encode(player)}].votes`, {}));
 	}
 
 }

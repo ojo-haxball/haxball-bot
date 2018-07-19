@@ -441,7 +441,7 @@ var Ban = function (_Command) {
 				return;
 			}
 
-			set(_this.votes, "[" + playerToBeBanned + "].votes[" + player, true);
+			set(_this.votes, "[" + _this.encode(playerToBeBanned) + "].votes[" + _this.encode(player), true);
 
 			var votes = _this.countVotes(playerToBeBanned);
 
@@ -451,14 +451,25 @@ var Ban = function (_Command) {
 				if (player === playerToBeBanned) _this.room.sendChat(_("Yes, you can also vote by yourself \uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F"));
 				_this.room.sendChat(_("Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.", playerToBeBanned, _this.countVotes(playerToBeBanned), _this.votesToBan));
 			}
+
+			console.log(_this.votes);
 		};
 
 		_this.removeVotesFromPlayer = function (leavingPlayer) {
-			if (has(_this.votes, "[" + leavingPlayer.name + "]")) delete _this.votes[leavingPlayer.name];
+			if (has(_this.votes, "[" + _this.encode(leavingPlayer.name) + "]")) delete _this.votes[_this.encode(leavingPlayer.name)];
 
 			forEach(_this.votes, function (playerInfo) {
-				if (has(playerInfo, "votes[" + leavingPlayer.name + "]")) delete playerInfo.votes[leavingPlayer.name];
+				if (has(playerInfo, "votes[" + _this.encode(leavingPlayer.name) + "]")) delete playerInfo.votes[_this.encode(leavingPlayer.name)];
 			});
+		};
+
+		_this.encode = function (nick) {
+			return btoa("nick-" + nick);
+		};
+
+		_this.decode = function (str) {
+			var nick = atob(str);
+			return nick.replace("nick-", "");
 		};
 
 		_this.reset = function () {
@@ -472,7 +483,7 @@ var Ban = function (_Command) {
 		};
 
 		_this.countVotes = function (player) {
-			return size(get(_this.votes, "[" + player + "].votes", {}));
+			return size(get(_this.votes, "[" + _this.encode(player) + "].votes", {}));
 		};
 
 		_this.banAdmins = banAdmins;
