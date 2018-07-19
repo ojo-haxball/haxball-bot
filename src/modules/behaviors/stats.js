@@ -80,11 +80,11 @@ class Stats {
 	}
 
 	saveStats() {
-		localStorage.setItem(this.room.dbPrefix + "__goals__registry__", JSON.stringify(this.goalsRegistry));
+		localStorage.setItem(get(this.room, "dbPrefix", "")  + "__goals__registry__", JSON.stringify(this.goalsRegistry));
 	}
 
 	loadStats() {
-		const registry = localStorage.getItem(this.room.dbPrefix + "__goals__registry__");
+		const registry = localStorage.getItem(get(this.room, "dbPrefix", "") + "__goals__registry__");
 		if(!registry) {
 			this.goalsRegistry = {};
 			return;

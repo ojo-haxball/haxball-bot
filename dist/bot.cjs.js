@@ -669,12 +669,12 @@ var Stats = function () {
 	createClass(Stats, [{
 		key: "saveStats",
 		value: function saveStats() {
-			localStorage.setItem(this.room.dbPrefix + "__goals__registry__", JSON.stringify(this.goalsRegistry));
+			localStorage.setItem(get(this.room, "dbPrefix", "") + "__goals__registry__", JSON.stringify(this.goalsRegistry));
 		}
 	}, {
 		key: "loadStats",
 		value: function loadStats() {
-			var registry = localStorage.getItem(this.room.dbPrefix + "__goals__registry__");
+			var registry = localStorage.getItem(get(this.room, "dbPrefix", "") + "__goals__registry__");
 			if (!registry) {
 				this.goalsRegistry = {};
 				return;
