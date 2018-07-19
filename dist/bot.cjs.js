@@ -451,8 +451,6 @@ var Ban = function (_Command) {
 				if (player === playerToBeBanned) _this.room.sendChat(_("Yes, you can also vote by yourself \uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F"));
 				_this.room.sendChat(_("Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.", playerToBeBanned, _this.countVotes(playerToBeBanned), _this.votesToBan));
 			}
-
-			console.log(_this.votes);
 		};
 
 		_this.removeVotesFromPlayer = function (leavingPlayer) {

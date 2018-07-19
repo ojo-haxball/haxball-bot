@@ -55,9 +55,6 @@ class Ban extends Command {
 				this.room.sendChat(_(`Yes, you can also vote by yourself 🤦🏻‍♂️`));
 			this.room.sendChat(_(`Vote saved. Player %s has %d ban votes.\nYou need %d votes to ban the player.`, playerToBeBanned, this.countVotes(playerToBeBanned), this.votesToBan));
 		}
-
-		console.log(this.votes);
-
 	}
 
 	removeVotesFromPlayer = leavingPlayer => {
