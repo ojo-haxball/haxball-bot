@@ -1,6 +1,6 @@
 {
   "name": "@haxball-bot/bot",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Haxball space core module",
   "main": "dist/bot.cjs.js",
   "module": "dist/bot.es.js",
