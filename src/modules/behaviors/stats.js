@@ -6,15 +6,22 @@ import { _ } from "../../translations/index.js";
 
 class Stats {
 
-	constructor(room) {
+	constructor(room, settings = {}) {
+
+		const { countGoalsFrom = 3 } = settings;
+
 		this.room = room;
 		this.lastKick = false;
+		this.countGoalsFrom = countGoalsFrom;
 		this.goalsRegistry = {};
+		
 		this.loadStats();
+
 		room.addEventListener("onPlayerBallKick", this.saveLastKick);
 		room.addEventListener("onTeamGoal", this.onTeamGoal);
 		room.addEventListener("onGameStart", this.resetLastKick);
 		room.addEventListener("onGameStop", this.resetLastKick);
+
 		room.commandsManager.add("!misgoles", this.showPlayerStats);
 		room.commandsManager.add("!goleadores", this.showScorers);
 		room.commandsManager.add("!falleros", this.showOwnScorers);
@@ -55,16 +62,23 @@ class Stats {
 			return;
 		}
 
+		const blueTeam = this.room.getPlayerList().filter(player => player.team === 2);
+		const redTeam = this.room.getPlayerList().filter(player => player.team === 1);
+
 		if(this.lastKick.team === teamId) {
 			this.room.sendChat(_(`Goal from player %s!!!`, this.lastKick.name));
-			let goals = get(this.goalsRegistry, `${this.lastKick.name}.goals`, 0);
-			set(this.goalsRegistry, `${this.lastKick.name}.goals`, ++goals);
-			this.room.sendChat(_(`%s has %d goals.`, this.lastKick.name, goals));
+			if(blueTeam.length >= this.countGoalsFrom && redTeam.length >= this.countGoalsFrom) {
+				let goals = get(this.goalsRegistry, `${this.lastKick.name}.goals`, 0);
+				set(this.goalsRegistry, `${this.lastKick.name}.goals`, ++goals);
+				this.room.sendChat(_(`%s has %d goals.`, this.lastKick.name, goals));
+			}
 		} else {
 			this.room.sendChat(_(`Own goal from player %s 😆🤦🏻‍♂️`, this.lastKick.name));
-			let ownGoals = get(this.goalsRegistry, `${this.lastKick.name}.ownGoals`, 0);
-			set(this.goalsRegistry, `${this.lastKick.name}.ownGoals`, ++ownGoals);
-			this.room.sendChat(_(`%s has %d own goals.`, this.lastKick.name, ownGoals));
+			if(blueTeam.length >= this.countGoalsFrom && redTeam.length >= this.countGoalsFrom) {
+				let ownGoals = get(this.goalsRegistry, `${this.lastKick.name}.ownGoals`, 0);
+				set(this.goalsRegistry, `${this.lastKick.name}.ownGoals`, ++ownGoals);
+				this.room.sendChat(_(`%s has %d own goals.`, this.lastKick.name, ownGoals));
+			}
 		}
 		set(this.goalsRegistry, `${this.lastKick.name}.name`, this.lastKick.name);
 		this.resetLastKick();

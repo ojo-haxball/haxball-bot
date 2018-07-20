@@ -35,8 +35,6 @@ class Room {
 			clearBans: null,
 			setScoreLimit: null,
 			setTimeLimit: null,
-			setCustomStadium: null,
-			setDefaultStadium: null,
 			setTeamsLock: null,
 			setTeamColors: null,
 			startGame: null,
@@ -64,6 +62,19 @@ class Room {
 		}
 		this.commandsManager = new CommandsManager(this);
 	}
+
+	setCustomStadium = (string) => {
+		this.stadium = string;
+		this.room.setCustomStadium(string);
+	};
+	
+	setDefaultStadium = (string) => {
+		this.stadium = string;
+		this.room.setDefaultStadium(string);
+	};
+
+	getStadium = () => (this.stadium);
+
 
 	addEventListener = (event, callback) => {
 		if (!this._events[event]) {

@@ -22,7 +22,9 @@ export default [
 			"lodash-es/has",
 			"lodash-es/find",
 			"lodash-es/orderBy",
-			"lodash-es/size"
+			"lodash-es/size",
+			"lodash-es/isObject",
+			"lodash-es/isString"
 		],
 		plugins: [
 			json(),

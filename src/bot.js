@@ -8,6 +8,7 @@ class Bot {
 			teamsLock = true,
 			customStadium = false,
 			dbPrefix = "",
+			defaultStadium,
 			...rest
 		} = settings;
 
@@ -15,6 +16,8 @@ class Bot {
 		this.room = new Room(room, settings);
 		if (customStadium)
 			this.room.setCustomStadium(JSON.stringify(customStadium));
+		else if(defaultStadium)
+			this.room.setDefaultStadium(defaultStadium);
 		this.room.setScoreLimit(scoreLimit);
 		this.room.setTimeLimit(timeLimit);
 		this.room.setTeamsLock(teamsLock);

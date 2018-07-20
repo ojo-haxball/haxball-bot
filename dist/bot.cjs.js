@@ -122,6 +122,20 @@ var Room = function Room(room, settings) {
 
 	classCallCheck(this, Room);
 
+	this.setCustomStadium = function (string) {
+		_this.stadium = string;
+		_this.room.setCustomStadium(string);
+	};
+
+	this.setDefaultStadium = function (string) {
+		_this.stadium = string;
+		_this.room.setDefaultStadium(string);
+	};
+
+	this.getStadium = function () {
+		return _this.stadium;
+	};
+
 	this.addEventListener = function (event, callback) {
 		if (!_this._events[event]) {
 			console.warn("There is no " + event + " event available to suscribe.");
@@ -173,8 +187,6 @@ var Room = function Room(room, settings) {
 		clearBans: null,
 		setScoreLimit: null,
 		setTimeLimit: null,
-		setCustomStadium: null,
-		setDefaultStadium: null,
 		setTeamsLock: null,
 		setTeamColors: null,
 		startGame: null,
@@ -224,12 +236,13 @@ var Bot = function () {
 		    _settings$customStadi = settings.customStadium,
 		    customStadium = _settings$customStadi === undefined ? false : _settings$customStadi,
 		    _settings$dbPrefix = settings.dbPrefix,
-		    rest = objectWithoutProperties(settings, ["scoreLimit", "timeLimit", "teamsLock", "customStadium", "dbPrefix"]);
+		    defaultStadium = settings.defaultStadium,
+		    rest = objectWithoutProperties(settings, ["scoreLimit", "timeLimit", "teamsLock", "customStadium", "dbPrefix", "defaultStadium"]);
 
 
 		var room = window.HBInit(rest);
 		this.room = new Room(room, settings);
-		if (customStadium) this.room.setCustomStadium(JSON.stringify(customStadium));
+		if (customStadium) this.room.setCustomStadium(JSON.stringify(customStadium));else if (defaultStadium) this.room.setDefaultStadium(defaultStadium);
 		this.room.setScoreLimit(scoreLimit);
 		this.room.setTimeLimit(timeLimit);
 		this.room.setTeamsLock(teamsLock);
@@ -548,9 +561,43 @@ var Colors = function (_Command) {
 }(Command);
 
 var BotBehaviors = function BotBehaviors(room, settings) {
+	var _this = this;
+
 	classCallCheck(this, BotBehaviors);
 
+	this.lockMap = function () {
+		//call this 5 seconds after room loads
+		setTimeout(function () {
+			_this.room.addEventListener("onStadiumChange", function (newStadiumName) {
+				var _room$settings = _this.room.settings,
+				    customStadium = _room$settings.customStadium,
+				    defaultStadium = _room$settings.defaultStadium;
+
+
+				var stadium = void 0;
+
+				if (customStadium) stadium = customStadium.name;else stadium = defaultStadium;
+
+				console.log(stadium, newStadiumName);
+
+				if (newStadiumName !== stadium) {
+					if (customStadium) {
+						_this.room.setCustomStadium(JSON.stringify(customStadium));
+					} else {
+						_this.room.setDefaultStadium(stadium);
+					}
+				}
+			});
+		}, 5000);
+	};
+
 	this.room = room;
+	this.settings = settings;
+	var _settings$lockMap = settings.lockMap,
+	    lockMap = _settings$lockMap === undefined ? true : _settings$lockMap;
+
+
+	if (lockMap) this.lockMap();
 };
 
 var FloodProtection = function FloodProtection(room) {
@@ -588,6 +635,7 @@ var Stats = function () {
 	function Stats(room) {
 		var _this = this;
 
+		var settings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 		classCallCheck(this, Stats);
 
 		this.showScorers = function () {
@@ -629,16 +677,27 @@ var Stats = function () {
 				return;
 			}
 
+			var blueTeam = _this.room.getPlayerList().filter(function (player) {
+				return player.team === 2;
+			});
+			var redTeam = _this.room.getPlayerList().filter(function (player) {
+				return player.team === 1;
+			});
+
 			if (_this.lastKick.team === teamId) {
 				_this.room.sendChat(_("Goal from player %s!!!", _this.lastKick.name));
-				var goals = get(_this.goalsRegistry, _this.lastKick.name + ".goals", 0);
-				set(_this.goalsRegistry, _this.lastKick.name + ".goals", ++goals);
-				_this.room.sendChat(_("%s has %d goals.", _this.lastKick.name, goals));
+				if (blueTeam.length >= _this.countGoalsFrom && redTeam.length >= _this.countGoalsFrom) {
+					var goals = get(_this.goalsRegistry, _this.lastKick.name + ".goals", 0);
+					set(_this.goalsRegistry, _this.lastKick.name + ".goals", ++goals);
+					_this.room.sendChat(_("%s has %d goals.", _this.lastKick.name, goals));
+				}
 			} else {
 				_this.room.sendChat(_("Own goal from player %s \uD83D\uDE06\uD83E\uDD26\uD83C\uDFFB\u200D\u2642\uFE0F", _this.lastKick.name));
-				var ownGoals = get(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", 0);
-				set(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", ++ownGoals);
-				_this.room.sendChat(_("%s has %d own goals.", _this.lastKick.name, ownGoals));
+				if (blueTeam.length >= _this.countGoalsFrom && redTeam.length >= _this.countGoalsFrom) {
+					var ownGoals = get(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", 0);
+					set(_this.goalsRegistry, _this.lastKick.name + ".ownGoals", ++ownGoals);
+					_this.room.sendChat(_("%s has %d own goals.", _this.lastKick.name, ownGoals));
+				}
 			}
 			set(_this.goalsRegistry, _this.lastKick.name + ".name", _this.lastKick.name);
 			_this.resetLastKick();
@@ -653,14 +712,22 @@ var Stats = function () {
 			_this.lastKick = false;
 		};
 
+		var _settings$countGoalsF = settings.countGoalsFrom,
+		    countGoalsFrom = _settings$countGoalsF === undefined ? 3 : _settings$countGoalsF;
+
+
 		this.room = room;
 		this.lastKick = false;
+		this.countGoalsFrom = countGoalsFrom;
 		this.goalsRegistry = {};
+
 		this.loadStats();
+
 		room.addEventListener("onPlayerBallKick", this.saveLastKick);
 		room.addEventListener("onTeamGoal", this.onTeamGoal);
 		room.addEventListener("onGameStart", this.resetLastKick);
 		room.addEventListener("onGameStop", this.resetLastKick);
+
 		room.commandsManager.add("!misgoles", this.showPlayerStats);
 		room.commandsManager.add("!goleadores", this.showScorers);
 		room.commandsManager.add("!falleros", this.showOwnScorers);
